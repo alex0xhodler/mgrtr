@@ -126,7 +126,7 @@ export const useEnsoBundle = (params: any, active?: boolean) => {
     queryKey: ["enso-bundle", params],
     // @ts-ignore
     queryFn: () => ensoClient.getBundleData(params.options, params.actions),
-    enabled: active && !!params && params.length > 0,
+    enabled: active && !!params && !!params.actions && params.actions.length > 0,
     retry: 1,
   });
 
