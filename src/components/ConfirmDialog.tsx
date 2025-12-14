@@ -126,6 +126,22 @@ const ConfirmDialog = ({
           },
         ],
       };
+    } else {
+      // Generic Same-Chain Fallback (e.g. Base -> Base)
+      return {
+        options,
+        actions: [
+          {
+            protocol: "enso",
+            action: "route",
+            args: {
+              tokenIn: position.token.address,
+              tokenOut: targetToken.address,
+              amountIn: rawAmount,
+            },
+          },
+        ],
+      };
     }
 
     return null;
