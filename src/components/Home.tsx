@@ -1,0 +1,494 @@
+import { useEffect, useState } from "react";
+import {
+  ArrowRight,
+  ArrowRightLeft,
+  TrendingUp,
+  TrendingDown,
+} from "lucide-react";
+import {
+  Box,
+  Heading,
+  Text,
+  HStack,
+  useDisclosure,
+  Card,
+  Center,
+  Skeleton,
+  Flex,
+  useBreakpointValue,
+} from "@chakra-ui/react";
+import { Address, isAddress } from "viem";
+import { useAccount, useChainId } from "wagmi";
+import { TokenData } from "@ensofinance/sdk";
+import { useEnsoBalances, useEnsoTokenDetails } from "@/service/enso";
+import { formatNumber, formatUSD, normalizeValue } from "@/service";
+import { capitalize, useDefiLlamaAPY } from "@/service/common";
+import { DEFILLAMA_POOL_IDS, MOCK_POSITIONS, MONAD_TARGETS, MONAD_VAULTS, SupportedChainId } from "@/service/constants";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import { Toaster } from "@/components/ui/toaster";
+import { Position } from "@/types";
+
+const SourcePoolItem = ({
+  position,
+  isSelected,
+  onClick,
+}: {
+  position: Position;
+  isSelected: boolean;
+  onClick: () => void;
+}) => {
+  const normalizedBalance = normalizeValue(
+    position.balance.amount,
+    position.token.decimals,
+  );
+
+  // Fetch Real APY for Gearbox on Monad
+  const poolId = position.token.chainId === SupportedChainId.MONAD &&
+    position.token.address.toLowerCase() === MONAD_VAULTS.GEARBOX_USDC.toLowerCase()
+    ? DEFILLAMA_POOL_IDS.GEARBOX_USDC : null;
+
+  const { data: apyData } = useDefiLlamaAPY(poolId || "");
+  const displayApy = poolId && apyData ? apyData.apy : position.token.apy;
+  const displayTvl = poolId && apyData ? apyData.borrowed : position.token.tvl;
+
+  return (
+    <Box
+      p={{ base: 3, md: 4 }}
+      shadow="sm"
+      rounded="xl"
+      cursor="pointer"
+      transition="all"
+      _hover={{ shadow: "md" }}
+      border={"2px solid"}
+      borderColor={isSelected ? "blue.500" : "transparent"}
+      onClick={onClick}
+      width="100%"
+    >
+      <HStack
+        justify="space-between"
+        align="start"
+        flexWrap={{ base: "wrap", sm: "nowrap" }}
+      >
+        <Box flex="1" minW={{ base: "60%", sm: "auto" }}>
+          <Text fontSize={{ base: "sm", md: "md" }} fontWeight="medium">
+            {position.token.name}
+          </Text>
+
+          <Text fontSize="xs" color={"gray.600"}>
+            {capitalize(position.token.project ?? "")}
+          </Text>
+
+          <Text fontSize={{ base: "xs", md: "sm" }}>
+            {position.token.underlyingTokens
+              ?.map(({ symbol }) => symbol)
+              .join("/")}
+          </Text>
+
+          {displayTvl > 0 && (
+            <Text mt={1} fontSize="xs" color="gray.600">
+              TVL: ${formatNumber(displayTvl)}
+            </Text>
+          )}
+        </Box>
+
+        <Box textAlign="right">
+          <Text fontWeight="medium" fontSize={{ base: "sm", md: "md" }}>
+            {formatUSD(+normalizedBalance * +position.balance.price)}
+          </Text>
+
+          <Text fontSize={{ base: "xs", md: "sm" }} color="gray.600">
+            {formatNumber(normalizedBalance)} {position.token.symbol}
+          </Text>
+
+          {(displayApy > 0 || displayApy === 0) && ( // Allow 0 to show if fetched? Or just > 0
+            <Text fontSize={{ base: "sm", md: "md" }}>
+              {displayApy?.toFixed(2)}% APY
+            </Text>
+          )}
+        </Box>
+      </HStack>
+    </Box>
+  );
+};
+
+const TargetPoolItem = ({
+  token,
+  sourceApy,
+  onSelect,
+}: {
+  token: TokenData & { project?: string };
+  sourceApy: number;
+  onSelect: () => void;
+}) => {
+  // Determine Pool ID for APY Fetch
+  let poolId = null;
+  if (token.chainId === SupportedChainId.MONAD) {
+    if (token.address.toLowerCase() === MONAD_VAULTS.USDC_ASIA.toLowerCase()) poolId = DEFILLAMA_POOL_IDS.USDC_ASIA;
+    if (token.address.toLowerCase() === MONAD_VAULTS.USDC_DELTA.toLowerCase()) poolId = DEFILLAMA_POOL_IDS.USDC_DELTA;
+  }
+
+  const { data: apyData } = useDefiLlamaAPY(poolId || "");
+  const displayApy = poolId && apyData ? apyData.apy : token.apy;
+  const displayTvl = poolId && apyData ? apyData.borrowed : token.tvl;
+
+  // Debug logging
+  if (poolId && apyData) {
+    console.log(`Pool ${token.name}:`, { borrowed: apyData.borrowed, tvlUsd: apyData.tvlUsd, fullData: apyData });
+  }
+
+  const apyDiff = displayApy - sourceApy;
+  const isPositive = apyDiff > 0;
+
+  return (
+    <Box
+      p={{ base: 3, md: 4 }}
+      shadow="sm"
+      rounded="xl"
+      cursor="pointer"
+      _hover={{ shadow: "md" }}
+      onClick={onSelect}
+      width="100%"
+    >
+      <HStack
+        justify="space-between"
+        align="start"
+        flexWrap={{ base: "wrap", sm: "nowrap" }}
+      >
+        <Box flex="1" minW={{ base: "60%", sm: "auto" }}>
+          <Text fontSize={{ base: "sm", md: "md" }} fontWeight="medium">
+            {token.name}
+          </Text>
+          <Text fontSize="xs" color={"gray.600"}>
+            {capitalize(token.project)}
+          </Text>{" "}
+          {poolId && (
+            <Text mt={1} fontSize="xs" color="gray.600">
+              TVL: {displayTvl ? formatUSD(displayTvl) : "Loading..."}
+            </Text>
+          )}
+        </Box>
+
+        {(displayApy > 0 || displayApy === 0) && (
+          <Box textAlign="right">
+            <Text fontSize={{ base: "md", md: "lg" }} fontWeight="medium">
+              {displayApy?.toFixed(2)}% APY
+            </Text>
+            <HStack
+              justify="end"
+              gap={1}
+              fontSize={{ base: "xs", md: "sm" }}
+              color={isPositive ? "green.500" : "red.500"}
+            >
+              {isPositive ? (
+                <TrendingUp size={16} />
+              ) : (
+                <TrendingDown size={16} />
+              )}
+              {sourceApy > 0 && (displayApy > 0 || displayApy === 0) && (
+                <Text color={isPositive ? "green.600" : "red.600"}>
+                  {isPositive ? "+" : ""}
+                  {apyDiff.toFixed(2)}% vs source
+                </Text>
+              )}
+            </HStack>
+          </Box>
+        )}
+      </HStack>
+    </Box>
+  );
+};
+
+const RenderSkeletons = () => {
+  const skeletonWidth = useBreakpointValue({ base: "100%", md: "340px" });
+
+  return [1, 2, 3].map((_, i) => (
+    <Skeleton rounded="xl" key={i} h={"110px"} w={skeletonWidth} />
+  ));
+};
+
+const usePositions = () => {
+  const { data: balances, isLoading: balancesLoading } = useEnsoBalances();
+  const sortedBalances = balances
+    ?.slice()
+    .sort(
+      (a, b) =>
+        +normalizeValue(+b.amount, b.decimals) * +b.price -
+        +normalizeValue(+a.amount, a.decimals) * +a.price,
+    );
+  const notEmptyBalanceAddresses = sortedBalances
+    ?.filter(({ token }) => isAddress(token))
+    .map((position) => position.token);
+
+  console.log("DEBUG: notEmptyBalanceAddresses", notEmptyBalanceAddresses);
+  if (balances && balances.length > 0) {
+    console.log("DEBUG: first balance item", balances[0]);
+    const gb = balances.find(b => b.token.toLowerCase() === "0x6b343f7b797f1488aa48c49d540690f2b2c89751");
+    console.log("DEBUG: Found Gearbox in balances?", gb);
+  }
+
+  const { data: positionsTokens, isLoading: tokenLoading } =
+    useEnsoTokenDetails({
+      address: notEmptyBalanceAddresses,
+      type: undefined,
+    });
+
+  console.log("DEBUG: positionsTokens", positionsTokens);
+
+  const positions = sortedBalances
+    ?.map((balance) => {
+      let token = positionsTokens?.find(
+        (token) => token.address.toLowerCase() === balance.token.toLowerCase(),
+      );
+
+      if (!token) {
+        // Fallback using balance data if Enso token details are missing
+        token = {
+          address: balance.token as Address,
+          name: balance.name || "Unknown Token",
+          symbol: balance.symbol || "UNK",
+          decimals: balance.decimals,
+          logoURI: balance.logoUri || "",
+          underlyingTokens: [],
+          apy: 0,
+          tvl: 0,
+          project: "Unknown",
+          chainId: balance.chainId,
+        } as any; // Cast to TokenData structure
+      }
+
+      return { balance, token };
+    })
+    .filter(({ token }) => {
+      if (!token) return false;
+      // Filter for Monad: Only show Gearbox USDC
+      if (token.chainId === SupportedChainId.MONAD) {
+        return token.address.toLowerCase() === MONAD_VAULTS.GEARBOX_USDC.toLowerCase();
+      }
+      return true;
+    });
+
+  const positionsLoading = balancesLoading || tokenLoading;
+
+  return {
+    positions,
+    positionsLoading,
+  };
+};
+
+const useTargetTokens = (
+  underlyingTokensExact: Address[],
+  currentTokenName: string,
+  chainId?: number,
+) => {
+  const { data: underlyingTokensData, isLoading: targetLoading } =
+    useEnsoTokenDetails({
+      underlyingTokensExact,
+      chainId,
+    });
+
+  /* eslint-disable-next-line prefer-const */
+  let { filteredUnderlyingTokens, targetLoading: loading } = {
+    filteredUnderlyingTokens: underlyingTokensData
+      ?.filter((token) => token.name !== currentTokenName && token.apy > 0), targetLoading
+  };
+
+  // Note: We return the raw data here, sorting happens in component to include Monad targets
+  return { filteredUnderlyingTokens, targetLoading };
+};
+
+const Home = () => {
+  const [selectedSource, setSelectedSource] = useState<Position>();
+  const [selectedTarget, setSelectedTarget] = useState<TokenData>();
+  const [isDemo, setIsDemo] = useState(false);
+  const { open, onOpen, onClose } = useDisclosure();
+  const { address } = useAccount();
+  const chainId = useChainId();
+
+  useEffect(() => {
+    // setSelectedSource(undefined); // Create persistence for cross-chain flow
+  }, [chainId, address, isDemo]);
+
+  const { positions, positionsLoading } = usePositions();
+
+  const underlyingTokens = selectedSource?.token.underlyingTokens?.map(
+    ({ address }) => address,
+  ) ?? [];
+
+  /* eslint-disable-next-line prefer-const */
+  let { filteredUnderlyingTokens: ensoTokens, targetLoading } = useTargetTokens(
+    underlyingTokens,
+    selectedSource?.token.name,
+    isDemo ? 8453 : chainId,
+  );
+
+  // Show only Monad Accountable targets
+  const filteredUnderlyingTokens = MONAD_TARGETS as any[];
+
+  const positionsToUse = isDemo ? MOCK_POSITIONS : positions;
+
+  const handleTargetSelect = (target) => {
+    setSelectedTarget(target);
+    onOpen();
+  };
+
+  // Determine if we're on mobile
+  const isMobile = useBreakpointValue({ base: true, md: false });
+
+  return (
+    <Box minH="100vh">
+      <Toaster />
+
+      <Center>
+        <Box
+          mx="auto"
+          w="full"
+          maxW="7xl"
+          px={{ base: 2, md: 4 }}
+          py={{ base: 4, md: 8 }}
+        >
+          <Flex
+            align="center"
+            justifyContent="space-around"
+            direction={{ base: "column", sm: "row" }}
+            gap={{ base: 3, md: 5 }}
+            mb={{ base: 3, md: 5 }}
+            w="full"
+          >
+            <Box>
+              <Heading
+                display="flex"
+                alignItems="center"
+                gap={2}
+                fontSize={{ base: "xl", md: "2xl" }}
+                fontWeight="bold"
+              >
+                <ArrowRightLeft className="h-6 w-6" />
+                Yield Migrator
+              </Heading>
+            </Box>
+
+            <Box
+              p={{ base: 2, md: 4 }}
+              shadow="sm"
+              rounded="xl"
+              cursor="pointer"
+              border={"2px solid"}
+              fontWeight={"medium"}
+              borderColor={isDemo ? "blue.500" : "transparent"}
+              onClick={() => setIsDemo((val) => !val)}
+            >
+              Use demo positions
+            </Box>
+          </Flex>
+
+          <Flex
+            justifyContent="center"
+            direction={{ base: "column", md: "row" }}
+            gap={{ base: 4, md: 6 }}
+            w="full"
+            align="start"
+          >
+            {/* Source Pool Column */}
+            <Box w={{ base: "full", md: "390px" }} mb={{ base: 4, md: 0 }}>
+              <Card.Root>
+                <Card.Header>
+                  <Heading size="md">Your positions</Heading>
+                </Card.Header>
+
+                <Card.Body gap={4}>
+                  {positionsLoading ? (
+                    <RenderSkeletons />
+                  ) : positionsToUse?.length > 0 ? (
+                    positionsToUse.map((position) => (
+                      <SourcePoolItem
+                        key={position.token.address}
+                        position={position}
+                        isSelected={
+                          selectedSource?.token.address ===
+                          position.token.address
+                        }
+                        onClick={() => setSelectedSource(position)}
+                      />
+                    ))
+                  ) : (
+                    <Box
+                      display="flex"
+                      h="40"
+                      alignItems="center"
+                      justifyContent="center"
+                      color="gray.500"
+                    >
+                      {address ? (
+                        <Text>No positions found</Text>
+                      ) : (
+                        <Text textAlign="center" px={2}>
+                          Connect your wallet or use demo to continue
+                        </Text>
+                      )}
+                    </Box>
+                  )}
+                </Card.Body>
+              </Card.Root>
+            </Box>
+
+            {/* Mobile arrow indicator */}
+            {isMobile && selectedSource && (
+              <Flex justify="center" w="full" py={2}>
+                <ArrowRight className="h-6 w-6" />
+              </Flex>
+            )}
+
+            {/* Target Pool Column */}
+            <Box w={{ base: "full", md: "390px" }}>
+              <Card.Root>
+                <Card.Header>
+                  <Heading size="md">Target Pool</Heading>
+                </Card.Header>
+
+                <Card.Body gap={4}>
+                  {selectedSource ? (
+                    targetLoading ? (
+                      <RenderSkeletons />
+                    ) : (
+                      filteredUnderlyingTokens?.map((target) => (
+                        <TargetPoolItem
+                          key={target.address}
+                          token={target}
+                          sourceApy={selectedSource?.token.apy}
+                          onSelect={() => handleTargetSelect(target)}
+                        />
+                      ))
+                    )
+                  ) : (
+                    <Box
+                      display="flex"
+                      h="40"
+                      alignItems="center"
+                      justifyContent="center"
+                      color="gray.500"
+                    >
+                      <HStack alignItems="center" gap={2}>
+                        <Text>Select a source pool</Text>
+                        <ArrowRight className="h-4 w-4" />
+                      </HStack>
+                    </Box>
+                  )}
+                </Card.Body>
+              </Card.Root>
+            </Box>
+          </Flex>
+        </Box>
+      </Center>
+
+      <ConfirmDialog
+        open={open}
+        onOpenChange={onClose}
+        position={selectedSource}
+        targetToken={selectedTarget}
+        isDemo={isDemo}
+      />
+    </Box>
+  );
+};
+
+export default Home;
