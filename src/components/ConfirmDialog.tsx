@@ -479,6 +479,7 @@ const ConfirmDialog = ({
             <Box mt={6} pt={4} borderTop="1px dashed" borderColor="whiteAlpha.100">
               <Text fontSize="xx-small" color="gray.800" fontFamily="monospace">
                 DEBUG: BUNDLE={bundleData?.tx ? "OK" : "NO"} | LOADING={bundleLoading ? "YES" : "NO"} | PARAMS={bundleParams ? "OK" : "NULL"}
+                | APPROVE={approveNeeded ? "YES" : "NO"} | PEND={pendingMigration ? "YES" : "NO"} | DEMO={isDemo ? "YES" : "NO"}
                 {bundleError && ` | ERROR=${String(bundleError).substring(0, 30)}...`}
               </Text>
             </Box>
