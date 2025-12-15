@@ -117,7 +117,7 @@ const useEnsoRouterData = (params: RouteParams, active?: boolean) =>
       params.tokenOut,
       params.amountIn,
     ],
-    queryFn: () => ensoClient.getRouterData(params),
+    queryFn: () => getEnsoClient().getRouterData(params),
     enabled:
       active &&
       +params.amountIn > 0 &&
@@ -135,7 +135,7 @@ export const useEnsoBundle = (params: any, active?: boolean) => {
   const { data: bundleData, isLoading: bundleLoading, error } = useQuery({
     queryKey: ["enso-bundle", params],
     // @ts-ignore
-    queryFn: () => ensoClient.getBundleData(params.options, params.actions),
+    queryFn: () => getEnsoClient().getBundleData(params.options, params.actions),
     enabled: active && !!params && !!params.actions && params.actions.length > 0,
     retry: 1,
   });
