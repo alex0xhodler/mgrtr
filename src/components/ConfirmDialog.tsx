@@ -183,7 +183,12 @@ const ConfirmDialog = ({
   const usdValue = position?.balance?.price ?
     (parseFloat(displayAmount || "0") * position.balance.price).toFixed(2) : "0.00";
 
-  const isButtonDisabled = isDemo || (!!address && (bundleLoading || !bundleData?.tx || pendingMigration));
+  const isButtonDisabled = isDemo || (
+    !!address && (
+      pendingMigration ||
+      (!approveNeeded && (bundleLoading || !bundleData?.tx))
+    )
+  );
 
   // DESIGN TOKENS
   const neonGreen = "#1BD596"; // On-brand Green
