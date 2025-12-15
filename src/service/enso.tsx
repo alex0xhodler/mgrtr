@@ -9,9 +9,19 @@ import { DEFAULT_SLIPPAGE, ONEINCH_ONLY_TOKENS } from "./constants";
 
 let ensoClient: EnsoClient;
 
+export const getEnsoClient = () => {
+  if (!ensoClient) {
+    const apiKey = import.meta.env.VITE_ENSO_API_KEY || "1e026344-9721-419b-83bb-474075199676"; // Fallback demo key if env missing
+    ensoClient = new EnsoClient({
+      apiKey,
+    });
+  }
+  return ensoClient;
+};
+
 export const setApiKey = (apiKey: string) => {
+  if (!apiKey) return;
   ensoClient = new EnsoClient({
-    // baseURL: "http://localhost:3000/api/v1",
     apiKey,
   });
 };

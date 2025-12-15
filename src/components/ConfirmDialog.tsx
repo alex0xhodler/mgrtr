@@ -23,6 +23,7 @@ import { DEFILLAMA_POOL_IDS, MONAD_VAULTS, SupportedChainId, MONAD_USDC_ADDRESS,
 import { useEffect, useState, useMemo } from "react";
 import { parseUnits, formatUnits } from "viem";
 
+import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { Position } from "@/types";
 
 const ConfirmDialog = ({
@@ -39,6 +40,7 @@ const ConfirmDialog = ({
   isDemo?: boolean;
 }) => {
   const { address } = useAccount();
+  const { openConnectModal } = useConnectModal();
   const currentChainId = useChainId();
 
   const [displayAmount, setDisplayAmount] = useState("");
@@ -181,7 +183,7 @@ const ConfirmDialog = ({
   const usdValue = position?.balance?.price ?
     (parseFloat(displayAmount || "0") * position.balance.price).toFixed(2) : "0.00";
 
-  const isButtonDisabled = isDemo || bundleLoading || !bundleData?.tx || pendingMigration;
+  const isButtonDisabled = isDemo || (!!address && (bundleLoading || !bundleData?.tx || pendingMigration));
 
   // DESIGN TOKENS
   const neonGreen = "#1BD596"; // On-brand Green
@@ -439,6 +441,10 @@ const ConfirmDialog = ({
                 disabled={isButtonDisabled}
                 letterSpacing="0.5px"
                 onClick={() => {
+                  if (!address && openConnectModal) {
+                    openConnectModal();
+                    return;
+                  }
                   if (approveNeeded) {
                     approve?.write();
                     setPendingMigration(true);
@@ -448,6 +454,7 @@ const ConfirmDialog = ({
                 }}
               >
                 {(() => {
+                  if (!address) return <HStack><Wallet size={20} /> <Text>Connect Wallet</Text></HStack>;
                   if (bundleLoading) return <HStack><Activity className="animate-spin" /> <Text>CALCULATING ROUTE...</Text></HStack>;
                   if (approveNeeded) return <HStack><Lock size={20} /> <Text>APPROVE ACCESS</Text></HStack>;
                   if (sendTransaction.isLoading) return <HStack><Activity className="animate-spin" /> <Text>PROCESSING...</Text></HStack>;
