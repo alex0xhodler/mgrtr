@@ -288,7 +288,7 @@ const usePositions = (currentChainId: number) => {
       );
 
       // Force metadata for manual Euler if missing
-      if (!token && balance.token.toLowerCase() === MONAD_VAULTS.EULER_USDC.toLowerCase()) {
+      if (!token && balance.token.toLowerCase() === MONAD_VAULTS.EULER_USDC?.toLowerCase()) {
         token = {
           address: balance.token as Address,
           name: "Euler USDC",
