@@ -273,13 +273,17 @@ const usePositions = (currentChainId: number) => {
     // Debug logging...
   }
 
+  console.log("DEBUG: balances returned:", balances?.length);
+  console.log("DEBUG: mergedBalances length:", mergedBalances.length);
+
   const { data: positionsTokens, isLoading: tokenLoading } =
     useEnsoTokenDetails({
       address: notEmptyBalanceAddresses,
       type: undefined,
     });
 
-  // ... rest of hook
+  console.log("DEBUG: positionsTokens returned:", positionsTokens?.length);
+  console.log("DEBUG: positionsTokens:", positionsTokens);
 
   const positions = sortedBalances
     ?.map((balance) => {
@@ -316,20 +320,31 @@ const usePositions = (currentChainId: number) => {
           tvl: 0,
           project: balance.token.toLowerCase() === MONAD_VAULTS.GEARBOX_USDC.toLowerCase()
             ? "Gearbox"
-            : balance.token.toLowerCase() === MONAD_VAULTS.MORPHO_USDC.toLowerCase()
-              ? "Morpho"
-              : balance.token.toLowerCase() === MONAD_VAULTS.EULER_USDC?.toLowerCase()
-                ? "Euler"
-                : "Unknown",
-          chainId: (balance as any).chainId || currentChainId, // Default to current chain if missing
+          // Auto-detect Monad chain if it matches known vaults
+          chainId: (balance as any).chainId || currentChainId || (
+            [
+              MONAD_VAULTS.GEARBOX_USDC,
+              MONAD_VAULTS.MORPHO_USDC,
+              MONAD_VAULTS.EULER_USDC,
+              MONAD_USDC_ADDRESS
+            ].some(v => v?.toLowerCase() === balance.token.toLowerCase())
+              ? SupportedChainId.MONAD
+              : undefined
+          ),
         } as any; // Cast to TokenData structure
       }
 
-      return { balance, token };
+      const finalPosition = { balance, token };
+      // console.log("DEBUG: Mapped Position:", finalPosition.token.symbol, finalPosition.token.address, finalPosition.token.chainId);
+      return finalPosition;
     })
     .filter(({ token, balance }) => {
       // logic...
-      if (token.chainId !== SupportedChainId.MONAD) return false;
+      const effectiveChainId = token.chainId || currentChainId;
+      if (effectiveChainId !== SupportedChainId.MONAD) {
+        console.log("DEBUG: Filtered out due to chainId:", token.symbol, token.chainId, effectiveChainId);
+        return false;
+      }
       const addr = token.address.toLowerCase();
       const isMonadVault =
         addr === MONAD_VAULTS.GEARBOX_USDC.toLowerCase() ||
@@ -337,7 +352,10 @@ const usePositions = (currentChainId: number) => {
         addr === MONAD_VAULTS.EULER_USDC?.toLowerCase() ||
         addr === MONAD_USDC_ADDRESS.toLowerCase();
 
-      if (!isMonadVault) return false;
+      if (!isMonadVault) {
+        // console.log("DEBUG: Filtered out - Not a Monad Vault:", token.symbol, addr);
+        return false;
+      }
       return true;
     });
 
