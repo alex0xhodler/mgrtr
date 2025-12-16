@@ -259,12 +259,14 @@ const usePositions = () => {
       return { balance, token };
     })
     .filter(({ token }) => {
-      if (!token) return false;
-      // Filter for Monad: Only show Gearbox USDC
-      if (token.chainId === SupportedChainId.MONAD) {
-        return token.address.toLowerCase() === MONAD_VAULTS.GEARBOX_USDC.toLowerCase();
-      }
-      return true;
+      // Strict Filter: Only Monad Gearbox & Morpho
+      if (token.chainId !== SupportedChainId.MONAD) return false;
+
+      const addr = token.address.toLowerCase();
+      return (
+        addr === MONAD_VAULTS.GEARBOX_USDC.toLowerCase() ||
+        addr === MONAD_VAULTS.MORPHO_USDC.toLowerCase()
+      );
     });
 
   const positionsLoading = balancesLoading || tokenLoading;
