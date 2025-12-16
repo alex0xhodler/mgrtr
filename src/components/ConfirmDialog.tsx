@@ -133,12 +133,10 @@ const ConfirmDialog = ({
   const usdValue = position?.balance?.price ?
     (parseFloat(displayAmount || "0") * position.balance.price).toFixed(2) : "0.00";
 
-  const isButtonDisabled = isDemo || (
-    !!address && (
-      pendingMigration ||
-      (!approveNeeded && (bundleLoading || !bundleData?.tx))
-    )
-  );
+  // FORCE ENABLE: We only disable if a transaction is actively in flight.
+  const isButtonDisabled = pendingMigration;
+
+  // We explicitly handle "missing data" scenarios inside the onClick handler now.
 
   // DESIGN TOKENS
   const neonGreen = "#1BD596"; // On-brand Green
@@ -380,22 +378,13 @@ const ConfirmDialog = ({
                 color="black"
                 _hover={{ bg: "#00CC7D", transform: "translateY(-1px)", boxShadow: `0 0 30px ${neonGreen}40` }}
                 _active={{ transform: "translateY(0)" }}
-                _disabled={{
-                  bg: "gray.800",
-                  color: "gray.500",
-                  cursor: "not-allowed",
-                  boxShadow: "none",
-                  opacity: 1,
-                  border: "1px solid",
-                  borderColor: "whiteAlpha.100"
-                }}
                 fontSize="lg"
                 fontWeight="800"
                 borderRadius="xl"
                 transition="all 0.2s"
-                disabled={isButtonDisabled}
                 letterSpacing="0.5px"
                 onClick={() => {
+                  console.log("DEBUG: Button Clicked");
                   if (!address && openConnectModal) {
                     openConnectModal();
                     return;
@@ -410,7 +399,7 @@ const ConfirmDialog = ({
               >
                 {(() => {
                   if (!address) return <HStack><Wallet size={20} /> <Text>Connect Wallet</Text></HStack>;
-                  if (bundleLoading) return <HStack><Activity className="animate-spin" /> <Text>CALCULATING ROUTE...</Text></HStack>;
+                  // if (bundleLoading) return <HStack><Activity className="animate-spin" /> <Text>CALCULATING ROUTE...</Text></HStack>;
                   if (approveNeeded) return <HStack><Lock size={20} /> <Text>APPROVE ACCESS</Text></HStack>;
                   if (sendTransaction.isLoading) return <HStack><Activity className="animate-spin" /> <Text>PROCESSING...</Text></HStack>;
                   return <HStack><Wallet size={20} /> <Text>CONFIRM MIGRATION</Text></HStack>;
