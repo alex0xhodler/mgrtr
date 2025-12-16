@@ -258,7 +258,7 @@ const usePositions = () => {
 
       return { balance, token };
     })
-    .filter(({ token }) => {
+    .filter(({ token, balance }) => {
       // Strict Filter: Only Monad Gearbox & Morpho
       if (token.chainId !== SupportedChainId.MONAD) return false;
 
