@@ -52,13 +52,11 @@ const config = getDefaultConfig({
 const queryClient = new QueryClient();
 
 const Providers = ({ children }: { children: React.ReactNode }) => {
-  const { colorMode } = useColorMode();
-
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
-          theme={colorMode === "dark" ? darkTheme() : lightTheme()}
+          theme={darkTheme()}
         >
           {children}
         </RainbowKitProvider>

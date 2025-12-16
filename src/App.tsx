@@ -15,7 +15,7 @@ function App() {
 
   return (
     <div style={{ width: "100%", height: "100%" }}>
-      <Provider defaultTheme="dark">
+      <Provider defaultTheme="dark" forcedTheme="dark">
         <Providers>
           <div
             style={{
@@ -33,8 +33,6 @@ function App() {
                 alignItems: "center",
               }}
             >
-              <ColorModeButton />
-
               <ConnectButton />
             </div>
           </div>

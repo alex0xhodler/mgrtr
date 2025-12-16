@@ -23,7 +23,7 @@ import { TokenData } from "@ensofinance/sdk";
 import { useEnsoBalances, useEnsoTokenDetails } from "@/service/enso";
 import { formatNumber, formatUSD, normalizeValue } from "@/service";
 import { capitalize, useDefiLlamaAPY } from "@/service/common";
-import { DEFILLAMA_POOL_IDS, MOCK_POSITIONS, MONAD_TARGETS, MONAD_VAULTS, SupportedChainId } from "@/service/constants";
+import { DEFILLAMA_POOL_IDS, MOCK_POSITIONS, MONAD_TARGETS, MONAD_VAULTS, SupportedChainId, MONAD_USDC_ADDRESS } from "@/service/constants";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { Toaster } from "@/components/ui/toaster";
 import { Position } from "@/types";
@@ -54,34 +54,50 @@ const SourcePoolItem = ({
   return (
     <Box
       p={{ base: 3, md: 4 }}
-      shadow="sm"
+      bg="#111111"
       rounded="xl"
       cursor="pointer"
-      transition="all"
-      _hover={{ shadow: "md" }}
-      border={"2px solid"}
-      borderColor={isSelected ? "blue.500" : "transparent"}
+      transition="all 0.2s"
+      _hover={{ transform: "translateY(-2px)", shadow: "0 0 20px rgba(27, 213, 150, 0.15)" }}
+      border={"1px solid"}
+      borderColor={isSelected ? "#1BD596" : "#222"}
       onClick={onClick}
       width="100%"
+      position="relative"
+      overflow="hidden"
     >
+      {isSelected && (
+        <Box
+          position="absolute"
+          top={0}
+          left={0}
+          right={0}
+          bottom={0}
+          bg="radial-gradient(circle at center, rgba(27, 213, 150, 0.05) 0%, transparent 70%)"
+          pointerEvents="none"
+        />
+      )}
       <HStack
         justify="space-between"
         align="start"
         flexWrap={{ base: "wrap", sm: "nowrap" }}
       >
         <Box flex="1" minW={{ base: "60%", sm: "auto" }}>
-          <Text fontSize={{ base: "sm", md: "md" }} fontWeight="medium">
-            {position.token.name}
-          </Text>
+          <HStack gap={2} mb={1}>
+            <Text fontSize={{ base: "sm", md: "md" }} fontWeight="bold" color="white">
+              {position.token.name}
+            </Text>
+            {isSelected && <Box w="6px" h="6px" rounded="full" bg="#1BD596" boxShadow="0 0 10px #1BD596" />}
+          </HStack>
 
-          <Text fontSize="xs" color={"gray.600"}>
+          <Text fontSize="xs" color={"gray.400"} letterSpacing="0.5px">
             {capitalize(position.token.project ?? "")}
           </Text>
 
-          <Text fontSize={{ base: "xs", md: "sm" }}>
+          <Text fontSize={{ base: "xs", md: "sm" }} color="gray.500" mt={2} fontFamily="monospace">
             {position.token.underlyingTokens
               ?.map(({ symbol }) => symbol)
-              .join("/")}
+              .join(" / ")}
           </Text>
 
           {displayTvl > 0 && (
@@ -92,16 +108,16 @@ const SourcePoolItem = ({
         </Box>
 
         <Box textAlign="right">
-          <Text fontWeight="medium" fontSize={{ base: "sm", md: "md" }}>
+          <Text fontWeight="bold" fontSize={{ base: "md", md: "lg" }} color="white">
             {formatUSD(+normalizedBalance * +position.balance.price)}
           </Text>
 
-          <Text fontSize={{ base: "xs", md: "sm" }} color="gray.600">
+          <Text fontSize={{ base: "xs", md: "sm" }} color="gray.500" mb={1}>
             {formatNumber(normalizedBalance)} {position.token.symbol}
           </Text>
 
-          {(displayApy > 0 || displayApy === 0) && ( // Allow 0 to show if fetched? Or just > 0
-            <Text fontSize={{ base: "sm", md: "md" }}>
+          {(displayApy > 0 || displayApy === 0) && (
+            <Text fontSize={{ base: "sm", md: "md" }} color="#1BD596" fontWeight="bold">
               {displayApy?.toFixed(2)}% APY
             </Text>
           )}
@@ -129,12 +145,8 @@ const TargetPoolItem = ({
 
   const { data: apyData } = useDefiLlamaAPY(poolId || "");
   const displayApy = poolId && apyData ? apyData.apy : token.apy;
-  const displayTvl = poolId && apyData ? apyData.borrowed : token.tvl;
-
-  // Debug logging
-  if (poolId && apyData) {
-    console.log(`Pool ${token.name}:`, { borrowed: apyData.borrowed, tvlUsd: apyData.tvlUsd, fullData: apyData });
-  }
+  // Fallback to totalBorrowedUsd or tvlUsd
+  const displayTvl = poolId && apyData ? (apyData.totalBorrowedUsd || apyData.tvlUsd) : token.tvl;
 
   const apyDiff = displayApy - sourceApy;
   const isPositive = apyDiff > 0;
@@ -142,12 +154,15 @@ const TargetPoolItem = ({
   return (
     <Box
       p={{ base: 3, md: 4 }}
-      shadow="sm"
+      bg="#111111"
       rounded="xl"
       cursor="pointer"
-      _hover={{ shadow: "md" }}
+      transition="all 0.2s"
+      _hover={{ transform: "translateY(-2px)", shadow: "0 0 20px rgba(27, 213, 150, 0.1)" }}
+      border={"1px solid #222"}
       onClick={onSelect}
       width="100%"
+      position="relative"
     >
       <HStack
         justify="space-between"
@@ -155,39 +170,47 @@ const TargetPoolItem = ({
         flexWrap={{ base: "wrap", sm: "nowrap" }}
       >
         <Box flex="1" minW={{ base: "60%", sm: "auto" }}>
-          <Text fontSize={{ base: "sm", md: "md" }} fontWeight="medium">
-            {token.name}
-          </Text>
-          <Text fontSize="xs" color={"gray.600"}>
+          <HStack gap={2} mb={1}>
+            <Text fontSize={{ base: "sm", md: "md" }} fontWeight="bold" color="white">
+              {token.name}
+            </Text>
+          </HStack>
+
+          <Text fontSize="xs" color={"gray.400"}>
             {capitalize(token.project)}
           </Text>{" "}
           {poolId && (
             <Text mt={1} fontSize="xs" color="gray.600">
-              TVL: {displayTvl ? formatUSD(displayTvl) : "Loading..."}
+              Instant Liquidity: {displayTvl ? formatUSD(displayTvl) : "Loading..."}
             </Text>
           )}
         </Box>
 
         {(displayApy > 0 || displayApy === 0) && (
           <Box textAlign="right">
-            <Text fontSize={{ base: "md", md: "lg" }} fontWeight="medium">
+            <Box display="flex" justifyContent="flex-end" mb={1}>
+              <Box px={2} py={0.5} bg="#1BD59630" rounded="md">
+                <Text fontSize="10px" color="#1BD596" fontWeight="bold">ACTIVE</Text>
+              </Box>
+            </Box>
+            <Text fontSize={{ base: "md", md: "lg" }} fontWeight="bold" color="#1BD596">
               {displayApy?.toFixed(2)}% APY
             </Text>
             <HStack
               justify="end"
               gap={1}
               fontSize={{ base: "xs", md: "sm" }}
-              color={isPositive ? "green.500" : "red.500"}
+              color={isPositive ? "#1BD596" : "red.400"}
             >
               {isPositive ? (
-                <TrendingUp size={16} />
+                <TrendingUp size={14} />
               ) : (
-                <TrendingDown size={16} />
+                <TrendingDown size={14} />
               )}
               {sourceApy > 0 && (displayApy > 0 || displayApy === 0) && (
-                <Text color={isPositive ? "green.600" : "red.600"}>
+                <Text color={isPositive ? "#1BD596" : "red.400"} opacity={0.8}>
                   {isPositive ? "+" : ""}
-                  {apyDiff.toFixed(2)}% vs source
+                  {apyDiff.toFixed(2)}%
                 </Text>
               )}
             </HStack>
@@ -199,7 +222,7 @@ const TargetPoolItem = ({
 };
 
 const RenderSkeletons = () => {
-  const skeletonWidth = useBreakpointValue({ base: "100%", md: "340px" });
+  const skeletonWidth = useBreakpointValue({ base: "100%", md: "430px" });
 
   return [1, 2, 3].map((_, i) => (
     <Skeleton rounded="xl" key={i} h={"110px"} w={skeletonWidth} />
@@ -251,7 +274,7 @@ const usePositions = () => {
           underlyingTokens: [],
           apy: 0,
           tvl: 0,
-          project: "Unknown",
+          project: balance.token.toLowerCase() === MONAD_VAULTS.GEARBOX_USDC.toLowerCase() ? "Gearbox" : "Unknown",
           chainId: balance.chainId,
         } as any; // Cast to TokenData structure
       }
@@ -265,13 +288,16 @@ const usePositions = () => {
       const addr = token.address.toLowerCase();
       const isMonadVault =
         addr === MONAD_VAULTS.GEARBOX_USDC.toLowerCase() ||
-        addr === MONAD_VAULTS.MORPHO_USDC.toLowerCase();
+        addr === MONAD_VAULTS.MORPHO_USDC.toLowerCase() ||
+        addr === MONAD_VAULTS.EULER_USDC?.toLowerCase() ||
+        addr === MONAD_USDC_ADDRESS.toLowerCase(); // Allow USDC for direct zaps
 
       if (!isMonadVault) return false;
 
       // Value Filter > $100
-      const usdValue = +normalizeValue(+balance.amount, balance.decimals) * +balance.price;
-      return usdValue > 100;
+      // const usdValue = +normalizeValue(+balance.amount, balance.decimals) * +balance.price;
+      // return usdValue > 100;
+      return true; // TESTING: Allow all positions
     });
 
   const positionsLoading = balancesLoading || tokenLoading;
@@ -306,7 +332,7 @@ const useTargetTokens = (
 const Home = () => {
   const [selectedSource, setSelectedSource] = useState<Position>();
   const [selectedTarget, setSelectedTarget] = useState<TokenData>();
-  const [isDemo, setIsDemo] = useState(false);
+  const isDemo = false;
   const { open, onOpen, onClose } = useDisclosure();
   const { address } = useAccount();
   const chainId = useChainId();
@@ -339,8 +365,8 @@ const Home = () => {
     console.log("DEBUG: Source Value", sourceVal);
 
     filteredUnderlyingTokens = filteredUnderlyingTokens.filter(target => {
-      const isAsia = target.address.toLowerCase() === MONAD_VAULTS.USDC_ASIA.toLowerCase();
-      if (isAsia && sourceVal < 500) return false;
+      // const isAsia = target.address.toLowerCase() === MONAD_VAULTS.USDC_ASIA.toLowerCase();
+      // if (isAsia && sourceVal < 500) return false;
       return true;
     });
   }
@@ -384,22 +410,10 @@ const Home = () => {
                 fontWeight="bold"
               >
                 <ArrowRightLeft className="h-6 w-6" />
-                Yield Migrator
+                Accountable Yield Migrator
               </Heading>
             </Box>
 
-            <Box
-              p={{ base: 2, md: 4 }}
-              shadow="sm"
-              rounded="xl"
-              cursor="pointer"
-              border={"2px solid"}
-              fontWeight={"medium"}
-              borderColor={isDemo ? "blue.500" : "transparent"}
-              onClick={() => setIsDemo((val) => !val)}
-            >
-              Use demo positions
-            </Box>
           </Flex>
 
           <Flex
@@ -410,7 +424,7 @@ const Home = () => {
             align="start"
           >
             {/* Source Pool Column */}
-            <Box w={{ base: "full", md: "390px" }} mb={{ base: 4, md: 0 }}>
+            <Box w={{ base: "full", md: "480px" }} mb={{ base: 4, md: 0 }}>
               <Card.Root>
                 <Card.Header>
                   <Heading size="md">Your positions</Heading>
@@ -434,16 +448,29 @@ const Home = () => {
                   ) : (
                     <Box
                       display="flex"
-                      h="40"
+                      flexDirection="column"
+                      minH="40"
                       alignItems="center"
                       justifyContent="center"
                       color="gray.500"
+                      textAlign="center"
+                      p={4}
+                      gap={2}
                     >
                       {address ? (
-                        <Text>No positions found</Text>
+                        <>
+                          <Text fontWeight="bold">No eligible positions found</Text>
+                          <Text fontSize="xs" color="gray.400">
+                            We only support <Text as="span" color="white">Gearbox</Text>, <Text as="span" color="white">Morpho</Text> or <Text as="span" color="white">Euler</Text> vaults,
+                            or <Text as="span" color="white">USDC</Text> holdings on Monad.
+                          </Text>
+                          <Text fontSize="xs" color="gray.500">
+                            Minimum value required: <b>$100</b>
+                          </Text>
+                        </>
                       ) : (
                         <Text textAlign="center" px={2}>
-                          Connect your wallet or use demo to continue
+                          Connect your wallet to continue
                         </Text>
                       )}
                     </Box>
@@ -460,7 +487,7 @@ const Home = () => {
             )}
 
             {/* Target Pool Column */}
-            <Box w={{ base: "full", md: "390px" }}>
+            <Box w={{ base: "full", md: "480px" }}>
               <Card.Root>
                 <Card.Header>
                   <Heading size="md">Target Pool</Heading>

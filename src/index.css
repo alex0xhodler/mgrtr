@@ -9,33 +9,36 @@ body {
 }
 
 body {
-  background: linear-gradient(
-    -45deg,
-    #050505,
-    #0a1f13,
-    #001a0f,
-    #050505
-  );
-  background-size: 400% 400%;
-  animation: gradient 15s ease infinite;
-  height: 100%;
-  color: white; /* Default text color for dark theme assumption */
+  background: #050505;
+  /* Fallback */
+  background: radial-gradient(circle at 50% 0%, #111e18 0%, #050505 60%);
+  background-attachment: fixed;
+  color: white;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-@keyframes gradient {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #050505;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #222;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #1BD596;
 }
 
 /* Mobile responsive styles */
 @media (max-width: 768px) {
+
   .chakra-ui-dark .connect-button button,
   .connect-button button {
     font-size: 14px !important;

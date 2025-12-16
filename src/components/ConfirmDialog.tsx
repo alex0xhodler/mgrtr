@@ -254,7 +254,7 @@ const ConfirmDialog = ({
                         borderColor="transparent"
                         _active={{ bg: "whiteAlpha.300", borderColor: neonGreen }}
                       >
-                        {percent === 100 ? "MAX" : `${percent}%`}
+                        {percent === 100 ? "MAX" : `${percent}% `}
                       </Button>
                     ))}
                   </HStack>
@@ -299,12 +299,12 @@ const ConfirmDialog = ({
                     borderRadius="xl"
                     border="1px solid"
                     borderColor={neonGreen}
-                    bgGradient={`linear(to-br, ${neonGreen}05, transparent)`}
+                    bgGradient={`linear(to - br, ${neonGreen}05, transparent)`}
                     position="relative"
                     overflow="hidden"
-                    boxShadow={`0 0 30px -10px ${neonGreen}20`}
+                    boxShadow={`0 0 30px - 10px ${neonGreen} 20`}
                   >
-                    <Box position="absolute" top={0} left={0} w="100%" h="2px" bg={neonGreen} opacity={0.5} boxShadow={`0 0 10px ${neonGreen}`} />
+                    <Box position="absolute" top={0} left={0} w="100%" h="2px" bg={neonGreen} opacity={0.5} boxShadow={`0 0 10px ${neonGreen} `} />
 
                     <Flex justify="space-between" align="start" mb={3}>
                       <Badge bg={neonGreen} color="black" fontSize="xx-small" fontWeight="bold">TARGET</Badge>
@@ -317,12 +317,12 @@ const ConfirmDialog = ({
                     <HStack justify="space-between" align="end">
                       <Box>
                         <Text fontSize="xs" color="gray.400">PROJECTED APY</Text>
-                        <Text fontSize="3xl" fontWeight="900" color={neonGreen} letterSpacing="-1px" textShadow={`0 0 20px ${neonGreen}40`}>
-                          {targetDisplayApy ? `${targetDisplayApy.toFixed(2)}%` : "..."}
+                        <Text fontSize="3xl" fontWeight="900" color={neonGreen} letterSpacing="-1px" textShadow={`0 0 20px ${neonGreen} 40`}>
+                          {targetDisplayApy ? `${targetDisplayApy.toFixed(2)}% ` : "..."}
                         </Text>
                       </Box>
                       {Number(displayApyDifference) > 0 && (
-                        <Badge bg="whiteAlpha.100" color={neonGreen} border={`1px solid ${neonGreen}40`}>
+                        <Badge bg="whiteAlpha.100" color={neonGreen} border={`1px solid ${neonGreen} 40`}>
                           +{displayApyDifference}% boost
                         </Badge>
                       )}
@@ -376,7 +376,7 @@ const ConfirmDialog = ({
                 h="64px"
                 bg={neonGreen}
                 color="black"
-                _hover={{ bg: "#00CC7D", transform: "translateY(-1px)", boxShadow: `0 0 30px ${neonGreen}40` }}
+                _hover={{ bg: "#00CC7D", transform: "translateY(-1px)", boxShadow: `0 0 30px ${neonGreen} 40` }}
                 _active={{ transform: "translateY(0)" }}
                 fontSize="lg"
                 fontWeight="800"
