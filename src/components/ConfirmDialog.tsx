@@ -131,7 +131,7 @@ const ConfirmDialog = ({
   };
 
   const usdValue = position?.balance?.price ?
-    (parseFloat(displayAmount || "0") * position.balance.price).toFixed(2) : "0.00";
+    (parseFloat(displayAmount || "0") * Number(position.balance.price)).toFixed(2) : "0.00";
 
   // FORCE ENABLE: We only disable if a transaction is actively in flight.
   const isButtonDisabled = pendingMigration;

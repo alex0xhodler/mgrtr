@@ -229,7 +229,7 @@ const RenderSkeletons = () => {
   ));
 };
 
-const usePositions = () => {
+const usePositions = (currentChainId: number) => {
   const { data: balances, isLoading: balancesLoading } = useEnsoBalances();
   const sortedBalances = balances
     ?.slice()
@@ -247,6 +247,10 @@ const usePositions = () => {
     console.log("DEBUG: first balance item", balances[0]);
     const gb = balances.find(b => b.token.toLowerCase() === "0x6b343f7b797f1488aa48c49d540690f2b2c89751");
     console.log("DEBUG: Found Gearbox in balances?", gb);
+    const morpho = balances.find(b => b.token.toLowerCase() === MONAD_VAULTS.MORPHO_USDC.toLowerCase());
+    console.log("DEBUG: Found Morpho in balances?", morpho);
+    const euler = balances.find(b => b.token.toLowerCase() === MONAD_VAULTS.EULER_USDC?.toLowerCase());
+    console.log("DEBUG: Found Euler in balances?", euler);
   }
 
   const { data: positionsTokens, isLoading: tokenLoading } =
@@ -274,8 +278,14 @@ const usePositions = () => {
           underlyingTokens: [],
           apy: 0,
           tvl: 0,
-          project: balance.token.toLowerCase() === MONAD_VAULTS.GEARBOX_USDC.toLowerCase() ? "Gearbox" : "Unknown",
-          chainId: balance.chainId,
+          project: balance.token.toLowerCase() === MONAD_VAULTS.GEARBOX_USDC.toLowerCase()
+            ? "Gearbox"
+            : balance.token.toLowerCase() === MONAD_VAULTS.MORPHO_USDC.toLowerCase()
+              ? "Morpho"
+              : balance.token.toLowerCase() === MONAD_VAULTS.EULER_USDC?.toLowerCase()
+                ? "Euler"
+                : "Unknown",
+          chainId: balance.chainId || currentChainId, // Default to current chain if missing
         } as any; // Cast to TokenData structure
       }
 
@@ -322,7 +332,7 @@ const useTargetTokens = (
   /* eslint-disable-next-line prefer-const */
   let { filteredUnderlyingTokens, targetLoading: loading } = {
     filteredUnderlyingTokens: underlyingTokensData
-      ?.filter((token) => token.name !== currentTokenName && token.apy > 0), targetLoading
+      ?.filter((token) => token.name !== currentTokenName && Number(token.apy) > 0), targetLoading
   };
 
   // Note: We return the raw data here, sorting happens in component to include Monad targets
@@ -341,7 +351,7 @@ const Home = () => {
     // setSelectedSource(undefined); // Create persistence for cross-chain flow
   }, [chainId, address, isDemo]);
 
-  const { positions, positionsLoading } = usePositions();
+  const { positions, positionsLoading } = usePositions(chainId);
 
   const underlyingTokens = selectedSource?.token.underlyingTokens?.map(
     ({ address }) => address,
@@ -502,7 +512,7 @@ const Home = () => {
                         <TargetPoolItem
                           key={target.address}
                           token={target}
-                          sourceApy={selectedSource?.token.apy}
+                          sourceApy={Number(selectedSource?.token.apy || 0)}
                           onSelect={() => handleTargetSelect(target)}
                         />
                       ))

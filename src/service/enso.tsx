@@ -72,9 +72,9 @@ export const useEnsoData = ({
   if (!chainId) chainId = wagmiChainId;
 
   const routerParams: RouteParams = {
-    amountIn,
-    tokenIn,
-    tokenOut,
+    amountIn: [amountIn],
+    tokenIn: [tokenIn],
+    tokenOut: [tokenOut],
     slippage,
     fromAddress: addressToUse,
     receiver: addressToUse,
@@ -117,14 +117,13 @@ const useEnsoRouterData = (params: RouteParams, active?: boolean) =>
       params.tokenOut,
       params.amountIn,
     ],
-    queryFn: () => getEnsoClient().getRouterData(params),
+    queryFn: () => getEnsoClient().getRouteData(params),
     enabled:
       active &&
-      +params.amountIn > 0 &&
+      (Array.isArray(params.amountIn) ? +params.amountIn[0] > 0 : +params.amountIn > 0) &&
       isAddress(params.fromAddress) &&
-      isAddress(params.tokenIn) &&
-      isAddress(params.tokenOut) &&
-      params.tokenIn !== params.tokenOut,
+      (Array.isArray(params.tokenIn) ? isAddress(params.tokenIn[0]) : isAddress(params.tokenIn)) &&
+      (Array.isArray(params.tokenOut) ? isAddress(params.tokenOut[0]) : isAddress(params.tokenOut)),
     retry: 2,
   });
 

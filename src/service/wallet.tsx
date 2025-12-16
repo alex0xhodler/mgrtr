@@ -11,7 +11,7 @@ import {
   useWriteContract,
   UseWriteContractReturnType,
 } from "wagmi";
-import { Address, BaseError, erc20Abi } from "viem";
+import { Address, BaseError, erc20Abi, formatUnits } from "viem";
 import { useQueryClient } from "@tanstack/react-query";
 import { RouteData, RouteParams } from "@ensofinance/sdk";
 import { toaster } from "@/components/ui/toaster";
@@ -265,7 +265,7 @@ export const useSendEnsoTransaction = (
 
   const description =
     params?.tokenIn && params?.tokenOut && params?.amountIn
-      ? `Purchase ${formatNumber(normalizeValue(params.amountIn, tokenFromData?.decimals))} ${tokenFromData?.symbol} of ${tokenData?.symbol}`
+      ? `Purchase ${formatNumber(formatUnits(BigInt(params.amountIn[0]), tokenFromData?.decimals))} ${tokenFromData?.symbol} of ${tokenData?.symbol}`
       : "Interacting with Enso";
 
   return useExtendedSendTransaction(description, ensoTxData);
