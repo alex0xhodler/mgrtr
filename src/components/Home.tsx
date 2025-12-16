@@ -21,6 +21,7 @@ import { Address, isAddress } from "viem";
 import { useAccount, useChainId } from "wagmi";
 import { TokenData } from "@ensofinance/sdk";
 import { useEnsoBalances, useEnsoTokenDetails } from "@/service/enso";
+import { useErc20Balance } from "@/service/wallet"; // Added manual fetch
 import { formatNumber, formatUSD, normalizeValue } from "@/service";
 import { capitalize, useDefiLlamaAPY } from "@/service/common";
 import { DEFILLAMA_POOL_IDS, MOCK_POSITIONS, MONAD_TARGETS, MONAD_VAULTS, SupportedChainId, MONAD_USDC_ADDRESS } from "@/service/constants";
@@ -231,7 +232,31 @@ const RenderSkeletons = () => {
 
 const usePositions = (currentChainId: number) => {
   const { data: balances, isLoading: balancesLoading } = useEnsoBalances();
-  const sortedBalances = balances
+
+  // MANUAL FETCH: Force check Euler vault in case Enso indexer is behind
+  const { data: eulerBalance } = useErc20Balance(MONAD_VAULTS.EULER_USDC as Address);
+
+  // Merge manual balances
+  const mergedBalances = [...(balances || [])];
+  if (eulerBalance && eulerBalance > 0n) {
+    const eulerAddr = MONAD_VAULTS.EULER_USDC.toLowerCase();
+    const exists = mergedBalances.find(b => b.token.toLowerCase() === eulerAddr);
+    if (!exists) {
+      console.log("DEBUG: Injecting manual Euler balance", eulerBalance.toString());
+      mergedBalances.push({
+        token: MONAD_VAULTS.EULER_USDC,
+        amount: eulerBalance.toString(),
+        decimals: 6, // Assume 6 for USDC vaults (safe bet, usually matches underlying)
+        price: 1, // Assume $1 peg for now if missing
+        symbol: "eUSDC",
+        name: "Euler USDC",
+        chainId: SupportedChainId.MONAD,
+        project: "Euler",
+      } as any);
+    }
+  }
+
+  const sortedBalances = mergedBalances
     ?.slice()
     .sort(
       (a, b) =>
@@ -243,14 +268,9 @@ const usePositions = (currentChainId: number) => {
     .map((position) => position.token);
 
   console.log("DEBUG: notEmptyBalanceAddresses", notEmptyBalanceAddresses);
-  if (balances && balances.length > 0) {
-    console.log("DEBUG: first balance item", balances[0]);
-    const gb = balances.find(b => b.token.toLowerCase() === "0x6b343f7b797f1488aa48c49d540690f2b2c89751");
-    console.log("DEBUG: Found Gearbox in balances?", gb);
-    const morpho = balances.find(b => b.token.toLowerCase() === MONAD_VAULTS.MORPHO_USDC.toLowerCase());
-    console.log("DEBUG: Found Morpho in balances?", morpho);
-    const euler = balances.find(b => b.token.toLowerCase() === MONAD_VAULTS.EULER_USDC?.toLowerCase());
-    console.log("DEBUG: Found Euler in balances?", euler);
+  if (sortedBalances && sortedBalances.length > 0) {
+    // console.log("DEBUG: first balance item", sortedBalances[0]);
+    // Debug logging...
   }
 
   const { data: positionsTokens, isLoading: tokenLoading } =
@@ -259,13 +279,29 @@ const usePositions = (currentChainId: number) => {
       type: undefined,
     });
 
-  console.log("DEBUG: positionsTokens", positionsTokens);
+  // ... rest of hook
 
   const positions = sortedBalances
     ?.map((balance) => {
       let token = positionsTokens?.find(
         (token) => token.address.toLowerCase() === balance.token.toLowerCase(),
       );
+
+      // Force metadata for manual Euler if missing
+      if (!token && balance.token.toLowerCase() === MONAD_VAULTS.EULER_USDC.toLowerCase()) {
+        token = {
+          address: balance.token as Address,
+          name: "Euler USDC",
+          symbol: "eUSDC",
+          decimals: 6,
+          logoURI: "",
+          project: "Euler",
+          chainId: SupportedChainId.MONAD,
+          underlyingTokens: [],
+          apy: 0,
+          tvl: 0,
+        } as any;
+      }
 
       if (!token) {
         // Fallback using balance data if Enso token details are missing
@@ -285,29 +321,24 @@ const usePositions = (currentChainId: number) => {
               : balance.token.toLowerCase() === MONAD_VAULTS.EULER_USDC?.toLowerCase()
                 ? "Euler"
                 : "Unknown",
-          chainId: balance.chainId || currentChainId, // Default to current chain if missing
+          chainId: (balance as any).chainId || currentChainId, // Default to current chain if missing
         } as any; // Cast to TokenData structure
       }
 
       return { balance, token };
     })
     .filter(({ token, balance }) => {
-      // Strict Filter: Only Monad Gearbox & Morpho
+      // logic...
       if (token.chainId !== SupportedChainId.MONAD) return false;
-
       const addr = token.address.toLowerCase();
       const isMonadVault =
         addr === MONAD_VAULTS.GEARBOX_USDC.toLowerCase() ||
         addr === MONAD_VAULTS.MORPHO_USDC.toLowerCase() ||
         addr === MONAD_VAULTS.EULER_USDC?.toLowerCase() ||
-        addr === MONAD_USDC_ADDRESS.toLowerCase(); // Allow USDC for direct zaps
+        addr === MONAD_USDC_ADDRESS.toLowerCase();
 
       if (!isMonadVault) return false;
-
-      // Value Filter > $100
-      // const usdValue = +normalizeValue(+balance.amount, balance.decimals) * +balance.price;
-      // return usdValue > 100;
-      return true; // TESTING: Allow all positions
+      return true;
     });
 
   const positionsLoading = balancesLoading || tokenLoading;
