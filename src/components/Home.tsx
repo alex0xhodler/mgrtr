@@ -263,10 +263,15 @@ const usePositions = () => {
       if (token.chainId !== SupportedChainId.MONAD) return false;
 
       const addr = token.address.toLowerCase();
-      return (
+      const isMonadVault =
         addr === MONAD_VAULTS.GEARBOX_USDC.toLowerCase() ||
-        addr === MONAD_VAULTS.MORPHO_USDC.toLowerCase()
-      );
+        addr === MONAD_VAULTS.MORPHO_USDC.toLowerCase();
+
+      if (!isMonadVault) return false;
+
+      // Value Filter > $100
+      const usdValue = +normalizeValue(+balance.amount, balance.decimals) * +balance.price;
+      return usdValue > 100;
     });
 
   const positionsLoading = balancesLoading || tokenLoading;
@@ -324,7 +329,21 @@ const Home = () => {
   );
 
   // Show only Monad Accountable targets
-  const filteredUnderlyingTokens = MONAD_TARGETS as any[];
+  // Filter Logic:
+  // 1. sUSN (Delta Neutral) - Always shown if source > $100 (implied by source filter)
+  // 2. sbMU (Asia Credit) - Only shown if source > $500
+  let filteredUnderlyingTokens = MONAD_TARGETS as any[];
+
+  if (selectedSource) {
+    const sourceVal = +normalizeValue(selectedSource.balance.amount, selectedSource.token.decimals) * +selectedSource.balance.price;
+    console.log("DEBUG: Source Value", sourceVal);
+
+    filteredUnderlyingTokens = filteredUnderlyingTokens.filter(target => {
+      const isAsia = target.address.toLowerCase() === MONAD_VAULTS.USDC_ASIA.toLowerCase();
+      if (isAsia && sourceVal < 500) return false;
+      return true;
+    });
+  }
 
   const positionsToUse = isDemo ? MOCK_POSITIONS : positions;
 
