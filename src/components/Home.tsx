@@ -320,6 +320,11 @@ const usePositions = (currentChainId: number) => {
           tvl: 0,
           project: balance.token.toLowerCase() === MONAD_VAULTS.GEARBOX_USDC.toLowerCase()
             ? "Gearbox"
+            : balance.token.toLowerCase() === MONAD_VAULTS.MORPHO_USDC.toLowerCase()
+              ? "Morpho"
+              : balance.token.toLowerCase() === MONAD_VAULTS.EULER_USDC?.toLowerCase()
+                ? "Euler"
+                : "Unknown",
           // Auto-detect Monad chain if it matches known vaults
           chainId: (balance as any).chainId || currentChainId || (
             [
