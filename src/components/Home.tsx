@@ -237,7 +237,12 @@ const usePositions = (currentChainId: number) => {
   // MANUAL FETCH: Force check Euler vault
   // Using local constant to avoid import issues
   const EULER_VAULT_ADDRESS = "0xA981f053C118FE4dB0e1aEBA192AAD20Ec7F7801";
+  const GEARBOX_VAULT_ADDRESS = MONAD_VAULTS.GEARBOX_USDC;
+  const MORPHO_VAULT_ADDRESS = MONAD_VAULTS.MORPHO_USDC;
+
   const { data: eulerBalance } = useErc20Balance(EULER_VAULT_ADDRESS as Address);
+  const { data: gearboxBalance } = useErc20Balance(GEARBOX_VAULT_ADDRESS as Address);
+  const { data: morphoBalance } = useErc20Balance(MORPHO_VAULT_ADDRESS as Address);
 
   // Merge manual balances
   const mergedBalances = [...(balances || [])];
@@ -256,6 +261,42 @@ const usePositions = (currentChainId: number) => {
         name: "Euler USDC",
         chainId: SupportedChainId.MONAD,
         project: "Euler",
+      } as any);
+    }
+  }
+
+  if (gearboxBalance && gearboxBalance > 0n) {
+    const gbAddr = GEARBOX_VAULT_ADDRESS.toLowerCase();
+    const exists = mergedBalances.find(b => b.token.toLowerCase() === gbAddr);
+
+    if (!exists) {
+      mergedBalances.push({
+        token: GEARBOX_VAULT_ADDRESS,
+        amount: gearboxBalance.toString(),
+        decimals: 6,
+        price: 1,
+        symbol: "dUSDCV3",
+        name: "Gearbox USDC",
+        chainId: SupportedChainId.MONAD,
+        project: "Gearbox",
+      } as any);
+    }
+  }
+
+  if (morphoBalance && morphoBalance > 0n) {
+    const morphoAddr = MORPHO_VAULT_ADDRESS.toLowerCase();
+    const exists = mergedBalances.find(b => b.token.toLowerCase() === morphoAddr);
+
+    if (!exists) {
+      mergedBalances.push({
+        token: MORPHO_VAULT_ADDRESS,
+        amount: morphoBalance.toString(),
+        decimals: 6,
+        price: 1,
+        symbol: "mcUSDC",
+        name: "Morpho USDC",
+        chainId: SupportedChainId.MONAD,
+        project: "Morpho",
       } as any);
     }
   }
@@ -295,6 +336,36 @@ const usePositions = (currentChainId: number) => {
           decimals: 6,
           logoURI: "",
           project: "Euler",
+          chainId: SupportedChainId.MONAD,
+          underlyingTokens: [],
+          apy: 0,
+          tvl: 0,
+        } as any;
+      }
+
+      if (!token && balance.token.toLowerCase() === MONAD_VAULTS.GEARBOX_USDC.toLowerCase()) {
+        token = {
+          address: balance.token as Address,
+          name: "Gearbox USDC",
+          symbol: "dUSDCV3",
+          decimals: 6,
+          logoURI: "",
+          project: "Gearbox",
+          chainId: SupportedChainId.MONAD,
+          underlyingTokens: [],
+          apy: 0,
+          tvl: 0,
+        } as any;
+      }
+
+      if (!token && balance.token.toLowerCase() === MONAD_VAULTS.MORPHO_USDC.toLowerCase()) {
+        token = {
+          address: balance.token as Address,
+          name: "Morpho USDC",
+          symbol: "mcUSDC",
+          decimals: 6,
+          logoURI: "",
+          project: "Morpho",
           chainId: SupportedChainId.MONAD,
           underlyingTokens: [],
           apy: 0,

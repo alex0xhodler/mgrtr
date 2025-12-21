@@ -132,21 +132,16 @@ export const useEnsoBundle = (params: any, active?: boolean) => {
   const { address } = useAccount();
 
   const isEnabled = active && !!params && !!params.actions && params.actions.length > 0;
-  console.log("DEBUG: useEnsoBundle", { params, active, isEnabled });
 
   const { data: bundleData, isLoading: bundleLoading, error } = useQuery({
     queryKey: ["enso-bundle", params],
     // @ts-ignore
     queryFn: async () => {
-      console.log("DEBUG: fetching bundle...");
       try {
         const client = getEnsoClient();
-        console.log("DEBUG: client obtained", client);
         const res = await client.getBundleData(params.options, params.actions);
-        console.log("DEBUG: bundle res", res);
         return res;
       } catch (err) {
-        console.error("DEBUG: bundle error", err);
         throw err;
       }
     },
