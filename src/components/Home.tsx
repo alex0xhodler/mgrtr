@@ -353,7 +353,7 @@ const usePositions = (currentChainId: number) => {
       }
 
       // Targeted Debug for Euler
-      if (balance.token.toLowerCase() === MONAD_VAULTS.EULER_USDC.toLowerCase()) {
+      if (balance.token.toLowerCase() === MONAD_VAULTS.EULER_USDC?.toLowerCase()) {
         console.log("DEBUG: Processing Euler in map. Token found?", !!token);
         console.log("DEBUG: Euler Balance Amount:", balance.amount);
         console.log("DEBUG: Euler Token constructed:", token);
@@ -366,7 +366,7 @@ const usePositions = (currentChainId: number) => {
       // logic...
       const effectiveChainId = token.chainId || currentChainId;
 
-      const isEuler = token.address.toLowerCase() === MONAD_VAULTS.EULER_USDC.toLowerCase();
+      const isEuler = token.address.toLowerCase() === MONAD_VAULTS.EULER_USDC?.toLowerCase();
       if (isEuler) {
         console.log("DEBUG: Checking Euler Filter.");
         console.log("DEBUG: ChainID:", token.chainId, "Effective:", effectiveChainId, "Target:", SupportedChainId.MONAD);
