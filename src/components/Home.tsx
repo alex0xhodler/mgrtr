@@ -234,25 +234,35 @@ const RenderSkeletons = () => {
 const usePositions = (currentChainId: number) => {
   const { data: balances, isLoading: balancesLoading } = useEnsoBalances();
 
-  // MANUAL FETCH: Force check Euler vault in case Enso indexer is still behind (despite update)
-  const { data: eulerBalance } = useErc20Balance(MONAD_VAULTS.EULER_USDC as Address);
+  // MANUAL FETCH: Force check Euler vault
+  // Using hardcoded address to verify: 0xA981f053C118FE4dB0e1aEBA192AAD20Ec7F7801
+  const EULER_ADDRESS = "0xA981f053C118FE4dB0e1aEBA192AAD20Ec7F7801";
+  const { data: eulerBalance, isLoading: eulerLoading, error: eulerError } = useErc20Balance(EULER_ADDRESS as Address);
 
   // Merge manual balances
   const mergedBalances = [...(balances || [])];
 
   // DEBUG LOGGING
-  // console.log("DEBUG: Raw Euler Balance:", eulerBalance?.toString());
-  // console.log("DEBUG: Euler Address Constant:", MONAD_VAULTS.EULER_USDC);
+  console.log("DEBUG: Euler Hook State:", {
+    balance: eulerBalance?.toString(),
+    loading: eulerLoading,
+    error: eulerError,
+    chainId: currentChainId
+  });
 
   if (eulerBalance && eulerBalance > 0n) {
-    const eulerAddr = MONAD_VAULTS.EULER_USDC.toLowerCase();
-    const exists = mergedBalances.find(b => b.token.toLowerCase() === eulerAddr);
+    const eulerAddr = EULER_ADDRESS.toLowerCase();
+
+    // Safety check just in case
+    const safeAddr = eulerAddr;
+
+    const exists = mergedBalances.find(b => b.token.toLowerCase() === safeAddr);
     // console.log("DEBUG: Does Euler exist in Enso balances?", exists);
 
     if (!exists) {
       console.log("DEBUG: Injecting manual Euler balance", eulerBalance.toString());
       mergedBalances.push({
-        token: MONAD_VAULTS.EULER_USDC,
+        token: EULER_ADDRESS,
         amount: eulerBalance.toString(),
         decimals: 6, // Assume 6 for USDC vaults
         price: 1, // Default to $1 if missing (better than nothing)
@@ -265,7 +275,7 @@ const usePositions = (currentChainId: number) => {
       console.log("DEBUG: Euler exists in Enso, skipping injection. Amount:", exists.amount);
     }
   } else {
-    console.log("DEBUG: Euler balance is 0 or undefined");
+    // console.log("DEBUG: Euler balance is 0 or undefined");
   }
 
   const sortedBalances = mergedBalances
