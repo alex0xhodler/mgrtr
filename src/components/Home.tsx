@@ -247,7 +247,6 @@ const usePositions = (currentChainId: number) => {
     const exists = mergedBalances.find(b => b.token.toLowerCase() === eulerAddr);
 
     if (!exists) {
-      console.log("DEBUG: Injecting manual Euler balance", eulerBalance.toString());
       mergedBalances.push({
         token: EULER_VAULT_ADDRESS,
         amount: eulerBalance.toString(),
@@ -258,11 +257,7 @@ const usePositions = (currentChainId: number) => {
         chainId: SupportedChainId.MONAD,
         project: "Euler",
       } as any);
-    } else {
-      console.log("DEBUG: Euler exists in Enso, skipping injection. Amount:", exists.amount);
     }
-  } else {
-    // console.log("DEBUG: Euler balance is 0 or undefined");
   }
 
   const sortedBalances = mergedBalances
@@ -276,30 +271,17 @@ const usePositions = (currentChainId: number) => {
     ?.filter(({ token }) => isAddress(token))
     .map((position) => position.token);
 
-  console.log("DEBUG: notEmptyBalanceAddresses", notEmptyBalanceAddresses);
-  if (sortedBalances && sortedBalances.length > 0) {
-    // console.log("DEBUG: first balance item", sortedBalances[0]);
-    // Debug logging...
-  }
-
-
-
   const { data: positionsTokens, isLoading: tokenLoading } =
     useEnsoTokenDetails({
       address: notEmptyBalanceAddresses,
       type: undefined,
     });
 
-  console.log("DEBUG: positionsTokens returned:", positionsTokens?.length);
-  console.log("DEBUG: positionsTokens:", positionsTokens);
-
   const positions = sortedBalances
     ?.map((balance) => {
       let token = positionsTokens?.find(
         (token) => token.address.toLowerCase() === balance.token.toLowerCase(),
       );
-
-
 
       // Force metadata for manual Euler if missing from SDK
       // Use local constant EULER_VAULT_ADDRESS to ensure match
@@ -352,29 +334,15 @@ const usePositions = (currentChainId: number) => {
         } as any; // Cast to TokenData structure
       }
 
-      // Targeted Debug for Euler
-      if (balance.token.toLowerCase() === EULER_VAULT_ADDRESS.toLowerCase()) {
-        console.log("DEBUG: Processing Euler in map. Token found?", !!token);
-        console.log("DEBUG: Euler Balance Amount:", balance.amount);
-        // console.log("DEBUG: Euler Token constructed:", token);
-      }
-
       const finalPosition = { balance, token };
       return finalPosition;
     })
     .filter(({ token, balance }) => {
-      // logic...
+      // Filter out tokens that are not on the current chain
+      // Default to currentChainId if token.chainId is missing (fallback)
       const effectiveChainId = token.chainId || currentChainId;
-      const EULER_VAULT_ADDRESS = "0xA981f053C118FE4dB0e1aEBA192AAD20Ec7F7801";
-
-      const isEuler = token.address.toLowerCase() === EULER_VAULT_ADDRESS.toLowerCase();
-      if (isEuler) {
-        // console.log("DEBUG: Checking Euler Filter.");
-      }
 
       if (effectiveChainId !== SupportedChainId.MONAD) {
-        if (isEuler) console.log("DEBUG: Euler Filtered out due to chainId mismatch!", effectiveChainId);
-        // console.log("DEBUG: Filtered out due to chainId:", token.symbol, token.chainId, effectiveChainId);
         return false;
       }
       const addr = token.address.toLowerCase();
@@ -385,8 +353,6 @@ const usePositions = (currentChainId: number) => {
         addr === MONAD_USDC_ADDRESS.toLowerCase();
 
       if (!isMonadVault) {
-        if (isEuler) console.log("DEBUG: Euler Filtered out - Not a Monad Vault");
-        // console.log("DEBUG: Filtered out - Not a Monad Vault:", token.symbol, addr);
         return false;
       }
 
