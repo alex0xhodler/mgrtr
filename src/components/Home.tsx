@@ -21,7 +21,8 @@ import { Address, isAddress } from "viem";
 import { useAccount, useChainId } from "wagmi";
 import { TokenData } from "@ensofinance/sdk";
 import { useEnsoBalances, useEnsoTokenDetails } from "@/service/enso";
-import { useErc20Balance } from "@/service/wallet"; // Added manual fetch
+import { useErc20Balance } from "@/service/wallet";
+
 import { formatNumber, formatUSD, normalizeValue } from "@/service";
 import { capitalize, useDefiLlamaAPY } from "@/service/common";
 import { DEFILLAMA_POOL_IDS, MOCK_POSITIONS, MONAD_TARGETS, MONAD_VAULTS, SupportedChainId, MONAD_USDC_ADDRESS } from "@/service/constants";
@@ -233,7 +234,7 @@ const RenderSkeletons = () => {
 const usePositions = (currentChainId: number) => {
   const { data: balances, isLoading: balancesLoading } = useEnsoBalances();
 
-  // MANUAL FETCH: Force check Euler vault in case Enso indexer is behind
+  // MANUAL FETCH: Force check Euler vault in case Enso indexer is still behind (despite update)
   const { data: eulerBalance } = useErc20Balance(MONAD_VAULTS.EULER_USDC as Address);
 
   // Merge manual balances
@@ -246,8 +247,8 @@ const usePositions = (currentChainId: number) => {
       mergedBalances.push({
         token: MONAD_VAULTS.EULER_USDC,
         amount: eulerBalance.toString(),
-        decimals: 6, // Assume 6 for USDC vaults (safe bet, usually matches underlying)
-        price: 1, // Assume $1 peg for now if missing
+        decimals: 6, // Assume 6 for USDC vaults
+        price: 1, // Default to $1 if missing (better than nothing)
         symbol: "eUSDC",
         name: "Euler USDC",
         chainId: SupportedChainId.MONAD,
@@ -273,8 +274,7 @@ const usePositions = (currentChainId: number) => {
     // Debug logging...
   }
 
-  console.log("DEBUG: balances returned:", balances?.length);
-  console.log("DEBUG: mergedBalances length:", mergedBalances.length);
+
 
   const { data: positionsTokens, isLoading: tokenLoading } =
     useEnsoTokenDetails({
@@ -291,7 +291,9 @@ const usePositions = (currentChainId: number) => {
         (token) => token.address.toLowerCase() === balance.token.toLowerCase(),
       );
 
-      // Force metadata for manual Euler if missing
+
+
+      // Force metadata for manual Euler if missing from SDK
       if (!token && balance.token.toLowerCase() === MONAD_VAULTS.EULER_USDC?.toLowerCase()) {
         token = {
           address: balance.token as Address,
