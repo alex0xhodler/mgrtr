@@ -291,7 +291,7 @@ const usePositions = (currentChainId: number) => {
       mergedBalances.push({
         token: MORPHO_VAULT_ADDRESS,
         amount: morphoBalance.toString(),
-        decimals: 6,
+        decimals: 18,
         price: 1,
         symbol: "mcUSDC",
         name: "Morpho USDC",
@@ -338,7 +338,7 @@ const usePositions = (currentChainId: number) => {
           project: "Euler",
           chainId: SupportedChainId.MONAD,
           underlyingTokens: [],
-          apy: 0,
+          apy: 6.2,
           tvl: 0,
         } as any;
       }
@@ -353,7 +353,7 @@ const usePositions = (currentChainId: number) => {
           project: "Gearbox",
           chainId: SupportedChainId.MONAD,
           underlyingTokens: [],
-          apy: 0,
+          apy: 8.15,
           tvl: 0,
         } as any;
       }
@@ -363,12 +363,12 @@ const usePositions = (currentChainId: number) => {
           address: balance.token as Address,
           name: "Morpho USDC",
           symbol: "mcUSDC",
-          decimals: 6,
+          decimals: 18,
           logoURI: "",
           project: "Morpho",
           chainId: SupportedChainId.MONAD,
           underlyingTokens: [],
-          apy: 0,
+          apy: 4.85,
           tvl: 0,
         } as any;
       }
