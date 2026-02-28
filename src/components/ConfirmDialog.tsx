@@ -12,7 +12,7 @@ import {
   SimpleGrid,
 } from "@chakra-ui/react";
 import { DialogRoot, DialogContent, DialogTitle, DialogDescription, DialogCloseTrigger } from "@/components/ui/dialog";
-import { Shield, Lock, TrendingUpIcon, ArrowRight, Wallet, Activity, Zap } from "lucide-react";
+import { Shield, Lock, TrendingUpIcon, ArrowRight, Wallet, Activity, Zap, Info } from "lucide-react";
 import { TokenData } from "@ensofinance/sdk";
 import { useAccount, useChainId } from "wagmi";
 import { useEnsoBundle } from "@/service/enso";
@@ -51,6 +51,10 @@ const ConfirmDialog = ({
       setDisplayAmount(normalizeValue(position.balance.amount, position.token.decimals));
     }
   }, [open, position]);
+
+  const availableAmount = parseFloat(normalizeValue(position?.balance?.amount, position?.token?.decimals) || "0");
+  const inputAmount = parseFloat(displayAmount || "0");
+  const isInsufficientBalance = inputAmount > availableAmount;
 
   const rawAmount = position?.token?.decimals && displayAmount && !isNaN(parseFloat(displayAmount))
     ? parseUnits(displayAmount, position.token.decimals).toString()
@@ -133,6 +137,10 @@ const ConfirmDialog = ({
   const usdValue = position?.balance?.price ?
     (parseFloat(displayAmount || "0") * Number(position.balance.price)).toFixed(2) : "0.00";
 
+  const projected1YearReturn = targetDisplayApy && parseFloat(usdValue) > 0
+    ? (parseFloat(usdValue) * (targetDisplayApy / 100)).toFixed(2)
+    : "0.00";
+
   // FORCE ENABLE: We only disable if a transaction is actively in flight.
   const isButtonDisabled = pendingMigration;
 
@@ -209,7 +217,7 @@ const ConfirmDialog = ({
                   bg="#000000"
                   borderRadius="xl"
                   border="1px solid"
-                  borderColor={borderColor}
+                  borderColor={isInsufficientBalance ? "red.500" : borderColor}
                   p={6}
                   position="relative"
                 >
@@ -223,7 +231,7 @@ const ConfirmDialog = ({
                       fontSize="5xl"
                       fontWeight="800"
                       letterSpacing="-1px"
-                      color="white"
+                      color={isInsufficientBalance ? "red.500" : "white"}
                       _placeholder={{ color: "gray.700" }}
                       step="any"
                       type="number"
@@ -275,17 +283,56 @@ const ConfirmDialog = ({
                     border="1px solid"
                     borderColor={borderColor}
                     bg="whiteAlpha.50"
+                    display="flex"
+                    flexDirection="column"
+                    justifyContent="space-between"
                   >
-                    <Badge bg="whiteAlpha.100" color="gray.400" fontSize="xx-small" mb={3}>CURRENT</Badge>
-                    <Text fontSize="xl" fontWeight="bold" mb={1}>{position?.token?.symbol}</Text>
-                    <Text fontSize="xs" color="gray.500" mb={4}>{capitalize(position?.token?.protocolSlug || "Wallet")}</Text>
+                    <Box>
+                      <Badge bg="whiteAlpha.100" color="gray.400" fontSize="xx-small" mb={3}>CURRENT</Badge>
+                      <Text fontSize="xl" fontWeight="bold" mb={1}>{position?.token?.name || capitalize(position?.token?.protocolSlug || "Wallet")}</Text>
+                      <Text fontSize="xs" color="gray.500" mb={4}>{position?.token?.symbol}</Text>
 
-                    <HStack justify="space-between" align="end">
-                      <Box>
-                        <Text fontSize="xs" color="gray.500">APY</Text>
-                        <Text fontSize="2xl" fontWeight="bold" color="gray.400">{sourceDisplayApy?.toFixed(2)}%</Text>
+                      <HStack justify="space-between" align="end">
+                        <Box>
+                          <Text fontSize="xs" color="gray.500">APY</Text>
+                          <Text fontSize="2xl" fontWeight="bold" color="gray.400">{sourceDisplayApy?.toFixed(2)}%</Text>
+                        </Box>
+                      </HStack>
+                    </Box>
+
+                    {sourceApyData && (
+                      <Box mt={5} pt={4} borderTop="1px solid" borderColor="whiteAlpha.100">
+                        <Text fontSize="2xs" fontWeight="bold" color="gray.500" letterSpacing="1px" textTransform="uppercase" mb={3}>
+                          Pool Details
+                        </Text>
+                        <VStack align="stretch" gap={2}>
+                          {sourceApyData.tvlUsd !== undefined && (
+                            <HStack justify="space-between">
+                              <Text fontSize="2xs" color="gray.400">TVL</Text>
+                              <Text fontSize="xs" fontWeight="bold" color="gray.300">
+                                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: "compact", maximumFractionDigits: 1 }).format(sourceApyData.tvlUsd)}
+                              </Text>
+                            </HStack>
+                          )}
+                          {sourceApyData.apyBase !== undefined && (
+                            <HStack justify="space-between">
+                              <Text fontSize="2xs" color="gray.400">Base APY</Text>
+                              <Text fontSize="xs" fontWeight="bold" color="gray.300">
+                                {sourceApyData.apyBase.toFixed(2)}%
+                              </Text>
+                            </HStack>
+                          )}
+                          {sourceApyData.apyReward !== undefined && sourceApyData.apyReward > 0 && (
+                            <HStack justify="space-between">
+                              <Text fontSize="2xs" color="gray.400">Reward APY</Text>
+                              <Text fontSize="xs" fontWeight="bold" color="gray.300">
+                                {sourceApyData.apyReward.toFixed(2)}%
+                              </Text>
+                            </HStack>
+                          )}
+                        </VStack>
                       </Box>
-                    </HStack>
+                    )}
                   </Box>
 
                   {/* ARROW INDICATOR */}
@@ -303,30 +350,72 @@ const ConfirmDialog = ({
                     position="relative"
                     overflow="hidden"
                     boxShadow={`0 0 30px - 10px ${neonGreen} 20`}
+                    display="flex"
+                    flexDirection="column"
+                    justifyContent="space-between"
                   >
                     <Box position="absolute" top={0} left={0} w="100%" h="2px" bg={neonGreen} opacity={0.5} boxShadow={`0 0 10px ${neonGreen} `} />
 
-                    <Flex justify="space-between" align="start" mb={3}>
-                      <Badge bg={neonGreen} color="black" fontSize="xx-small" fontWeight="bold">TARGET</Badge>
-                      <Zap size={16} color={neonGreen} fill={neonGreen} />
-                    </Flex>
+                    <Box>
+                      <Flex justify="space-between" align="start" mb={3}>
+                        <Badge bg={neonGreen} color="black" fontSize="xx-small" fontWeight="bold">TARGET</Badge>
+                        <Zap size={16} color={neonGreen} fill={neonGreen} />
+                      </Flex>
 
-                    <Text fontSize="xl" fontWeight="bold" color="white" mb={1}>{targetToken?.symbol}</Text>
-                    <Text fontSize="xs" color={neonGreen} opacity={0.8} mb={4}>{capitalize(targetToken?.protocolSlug || "Vault")}</Text>
+                      <HStack mb={1}>
+                        <Text fontSize="xl" fontWeight="bold" color="white">{targetToken?.name || capitalize(targetToken?.protocolSlug || "Vault")}</Text>
+                        {targetToken?.symbol === 'naccUSDC' && (
+                          <Box title="Private Credit Vault with 7-day liquidity" display="flex" alignItems="center" cursor="help">
+                            <Info size={16} color="gray" />
+                          </Box>
+                        )}
+                      </HStack>
+                      
+                      <HStack mb={4}>
+                        <Text fontSize="xs" color={neonGreen} opacity={0.8}>{targetToken?.symbol}</Text>
+                        {targetToken?.symbol === 'naccUSDC' && (
+                          <Badge bg="whiteAlpha.200" color="gray.300" fontSize="2xs" px={1.5}>Private Credit • 7-day withdrawal</Badge>
+                        )}
+                      </HStack>
 
-                    <HStack justify="space-between" align="end">
-                      <Box>
-                        <Text fontSize="xs" color="gray.400">PROJECTED APY</Text>
-                        <Text fontSize="3xl" fontWeight="900" color={neonGreen} letterSpacing="-1px" textShadow={`0 0 20px ${neonGreen} 40`}>
-                          {targetDisplayApy ? `${targetDisplayApy.toFixed(2)}% ` : "..."}
-                        </Text>
-                      </Box>
-                      {Number(displayApyDifference) > 0 && (
-                        <Badge bg="whiteAlpha.100" color={neonGreen} border={`1px solid ${neonGreen} 40`}>
-                          +{displayApyDifference}% boost
-                        </Badge>
-                      )}
-                    </HStack>
+                      <HStack justify="space-between" align="end">
+                        <Box>
+                          <Text fontSize="xs" color="gray.400">PROJECTED APY</Text>
+                          <Text fontSize="3xl" fontWeight="900" color={neonGreen} letterSpacing="-1px" textShadow={`0 0 20px ${neonGreen} 40`}>
+                            {targetDisplayApy ? `${targetDisplayApy.toFixed(2)}% ` : "..."}
+                          </Text>
+                          {parseFloat(usdValue) > 0 && targetDisplayApy && (
+                            <Text fontSize="xs" color="gray.500" mt={1}>≈ +${projected1YearReturn} / year</Text>
+                          )}
+                        </Box>
+                      </HStack>
+                    </Box>
+
+                    <Box mt={5} pt={4} borderTop="1px solid" borderColor="whiteAlpha.200">
+                      <Text fontSize="2xs" fontWeight="bold" color="gray.500" letterSpacing="1px" textTransform="uppercase" mb={3}>
+                        Yield boost vs. Stable Market Rates
+                      </Text>
+                      <VStack align="stretch" gap={2}>
+                        <HStack justify="space-between">
+                          <Text fontSize="2xs" color="gray.400">vs. Aave V3 (4.12%)</Text>
+                          <Text fontSize="xs" fontWeight="bold" color={neonGreen}>
+                            +{targetDisplayApy ? (targetDisplayApy - 4.12).toFixed(2) : "0.00"}% boost
+                          </Text>
+                        </HStack>
+                        <HStack justify="space-between">
+                          <Text fontSize="2xs" color="gray.400">vs. Compound V3 (3.85%)</Text>
+                          <Text fontSize="xs" fontWeight="bold" color={neonGreen}>
+                            +{targetDisplayApy ? (targetDisplayApy - 3.85).toFixed(2) : "0.00"}% boost
+                          </Text>
+                        </HStack>
+                        <HStack justify="space-between">
+                          <Text fontSize="2xs" color="gray.400">vs. Fluid (5.20%)</Text>
+                          <Text fontSize="xs" fontWeight="bold" color={neonGreen}>
+                            +{targetDisplayApy ? (targetDisplayApy - 5.20).toFixed(2) : "0.00"}% boost
+                          </Text>
+                        </HStack>
+                      </VStack>
+                    </Box>
                   </Box>
                 </Grid>
               </Box>
@@ -383,6 +472,8 @@ const ConfirmDialog = ({
                 borderRadius="xl"
                 transition="all 0.2s"
                 letterSpacing="0.5px"
+                disabled={isInsufficientBalance || isButtonDisabled}
+                opacity={isInsufficientBalance ? 0.5 : 1}
                 onClick={() => {
                   console.log("DEBUG: Button Clicked");
                   if (!address && openConnectModal) {
@@ -398,11 +489,12 @@ const ConfirmDialog = ({
                 }}
               >
                 {(() => {
+                  if (isInsufficientBalance) return <HStack><Activity size={20} /> <Text>Insufficient Balance</Text></HStack>;
                   if (!address) return <HStack><Wallet size={20} /> <Text>Connect Wallet</Text></HStack>;
-                  // if (bundleLoading) return <HStack><Activity className="animate-spin" /> <Text>CALCULATING ROUTE...</Text></HStack>;
-                  if (approveNeeded) return <HStack><Lock size={20} /> <Text>APPROVE ACCESS</Text></HStack>;
-                  if (sendTransaction.isLoading) return <HStack><Activity className="animate-spin" /> <Text>PROCESSING...</Text></HStack>;
-                  return <HStack><Wallet size={20} /> <Text>CONFIRM MIGRATION</Text></HStack>;
+                  if (pendingMigration && approveNeeded) return <HStack><Activity className="animate-spin" size={20} /> <Text>Confirming Approval...</Text></HStack>;
+                  if (approveNeeded) return <HStack><Lock size={20} /> <Text>Step 1/2: Approve USDC</Text></HStack>;
+                  if (sendTransaction.isLoading || pendingMigration) return <HStack><Activity className="animate-spin" size={20} /> <Text>Migrating to Vault...</Text></HStack>;
+                  return <HStack><Wallet size={20} /> <Text>Step 2/2: Migrate to Vault</Text></HStack>;
                 })()}
               </Button>
             ) : (
